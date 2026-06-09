@@ -44,3 +44,44 @@ You are free to use any frameworks/NuGet packages that you see fit. You should p
 Feel free to use code comments to describe your changes. You are also welcome to update this readme with any important details for us to consider.
 
 Once you have completed the exercise either ensure your repository is available publicly or contact the hiring manager to set up a private share.
+
+---
+
+## Solution Notes
+
+### Design approach
+
+The original `RebateService` violated several SOLID principles: it instantiated data stores directly (DIP), had a monolithic switch that needed to grow with every new incentive type (OCP/SRP), and contained a null-check bug where `rebate == null` was tested *after* `rebate.Incentive` was already accessed.
+
+The refactor introduces three patterns:
+
+**1. Interfaces for data stores (Dependency Inversion)**  
+`IRebateDataStore` and `IProductDataStore` allow the service and tests to depend on abstractions, not concrete implementations.
+
+**2. Strategy pattern (Open/Closed + Single Responsibility)**  
+Each incentive type gets its own class implementing `IRebateStrategy`, which owns two responsibilities: `IsValid()` to check preconditions and `Calculate()` to compute the rebate amount.
+
+**3. Factory (Single Responsibility)**  
+`RebateStrategyFactory` resolves the correct strategy by `IncentiveType` using a dictionary. `RebateService` no longer needs to know which strategies exist.
+
+### Adding a new incentive type
+
+1. Create a new class implementing `IRebateStrategy`.
+2. Register it when constructing `RebateStrategyFactory` (pass it in the strategies collection).
+3. No changes needed in `RebateService` or any existing strategy.
+
+### Running the console app
+
+```bash
+dotnet run --project Smartwyre.DeveloperTest.Runner
+```
+
+The app will prompt for `Rebate Identifier`, `Product Identifier` and `Volume`, then print `Result: Success` or `Result: Failure`.
+
+### Running the tests
+
+```bash
+dotnet test Smartwyre.DeveloperTest.Tests
+```
+
+10 unit tests covering happy paths and failure cases for each incentive type, null inputs, and missing strategy scenarios. Uses xUnit and Moq.
